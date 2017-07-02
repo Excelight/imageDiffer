@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# @Author: excelight
 
 from PIL import Image, ImageFilter, ImageChops
 import argparse
@@ -19,13 +20,23 @@ def imageSplit(path, direction, count, bgColor):
     """
     im = Image.open(path)
     _orign_width, _origin_height = im.size
-    print _orign_width
-    print _origin_height
-    im1 = im.crop((0, 0, _orign_width/2, _origin_height))
-    im2 = im.crop((_orign_width/2, 0, _orign_width, _origin_height))
-    im1Trimed = imageTrim(im1, bgColor)
-    im2Trimed = imageTrim(im2, bgColor)
-    return [im1Trimed, im2Trimed]
+    subImages = []
+    if 'v' == direction:
+        width = _orign_width
+        height = _origin_height / count
+        for i in range(count):
+            subImages.append(im.crop((0, height * i, width, height * (i + 1))))
+        pass
+    else:
+        width = _orign_width / count
+        height = _origin_height
+        for i in range(count):
+            subImages.append(im.crop((width * i, 0, width * (i + 1), height)))
+
+    subTrimedImages = []
+    for subIm in subImages:
+        subTrimedImages.append(imageTrim(subIm, bgColor))
+    return subTrimedImages
 
 def imageTrim(imageIn, bgColor):
     """
@@ -61,8 +72,16 @@ if __name__ == "__main__":
     SPLIT_COUNT = args.count
     BACKGROUND_COLOR = tuple([int(i) for i in args.bgcolor.split(',')])
 
-    # Starting
+    # Start
+    # Split into several sub images
     splitedImgs = imageSplit(IMAGE_PATH, DIRECTION, SPLIT_COUNT, BACKGROUND_COLOR)
-    im1 = splitedImgs[0]
-    im2 = splitedImgs[1]
-    ImageChops.difference(im1, im2).show()
+    baseImg = splitedImgs[0]
+    # Find differences
+    diffs = []
+    for i, subImg in enumerate(splitedImgs):
+        if 0 == i:
+            continue
+        diffs.append(ImageChops.difference(baseImg, subImg))
+    # Show
+    for diff in diffs:
+        diff.show()
